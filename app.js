@@ -1,4 +1,6 @@
 // Guard against duplicate script execution after conflict resolution.
+(function initIdeapp() {
+if (globalThis.__ideappInitialized) return;
 ideappBoot: {
 if (globalThis.__ideappInitialized) break ideappBoot;
 globalThis.__ideappInitialized = true;
@@ -142,6 +144,11 @@ function render() {
     const judgements = node.querySelector(".judgements");
     const approval = node.querySelector(".approval");
     const counts = node.querySelector(".counts");
+
+    if (!slide || !tags || !title || !description || !judgements || !approval || !counts) {
+      console.error("Ideapp idea template is missing required elements.");
+      return;
+    }
 
     slide.id = index === 0 ? "top" : `idea-${idea.id}`;
     slide.dataset.id = idea.id;
@@ -362,4 +369,5 @@ window.addEventListener("keydown", (event) => {
 });
 
 render();
+})();
 }
