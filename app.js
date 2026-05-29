@@ -6,8 +6,11 @@ var STORAGE_KEY = "ideappActivityIdeas.v1";
 var VOTES_KEY = "ideappActivityVotes.v1";
 var SWIPE_THRESHOLD = 120;
 var TAG_LIMIT = 5;
+var DAY_MS = 24 * 60 * 60 * 1000;
 var renderedOrder = [];
 var selectedTagSet = new Set();
+var lastVote = null;
+var suggestedTags = new Set(["Outdoors", "Food", "Creative", "Night", "Cozy", "Adrenaline", "10 minutes", "Low effort", "All day", "Plan ahead", "No money", "Road trip", "Solo", "Date", "Friends", "Family"]);
 
 var starterIdeas = [
   {
@@ -15,9 +18,9 @@ var starterIdeas = [
     title: "Secret stairway snack walk",
     description: "Find three public staircases in an older neighborhood, climb them before sunset, then end with tacos or ice cream.",
     category: "Outdoors",
-    effort: "Easy",
-    tags: ["Outdoors", "Easy", "Food"],
-    createdAt: Date.now() - 360000,
+    effort: "Low effort",
+    tags: ["Outdoors", "Low effort", "Food"],
+    createdAt: Date.now() - DAY_MS * 2 - 360000,
     yes: 18,
     no: 4
   },
@@ -28,7 +31,7 @@ var starterIdeas = [
     category: "Wildcard",
     effort: "Medium",
     tags: ["Wildcard", "Transit", "One hour"],
-    createdAt: Date.now() - 250000,
+    createdAt: Date.now() - DAY_MS * 2 - 250000,
     yes: 23,
     no: 7
   },
@@ -39,7 +42,7 @@ var starterIdeas = [
     category: "Creative",
     effort: "Bring friends",
     tags: ["Creative", "Friends", "No money"],
-    createdAt: Date.now() - 190000,
+    createdAt: Date.now() - DAY_MS * 2 - 190000,
     yes: 16,
     no: 8
   },
@@ -50,7 +53,7 @@ var starterIdeas = [
     category: "Adrenaline",
     effort: "Plan ahead",
     tags: ["Adrenaline", "Plan ahead", "Food"],
-    createdAt: Date.now() - 120000,
+    createdAt: Date.now() - DAY_MS * 2 - 120000,
     yes: 28,
     no: 5
   }
@@ -61,11 +64,16 @@ var ideaTemplate = document.querySelector("#ideaTemplate");
 var sortIdeas = document.querySelector("#sortIdeas");
 var yesButton = document.querySelector("#yesButton");
 var noButton = document.querySelector("#noButton");
-var seedButton = document.querySelector("#seedButton");
+var undoButton = document.querySelector("#undoButton");
+var copyButton = document.querySelector("#copyButton");
 var openComposer = document.querySelector("#openComposer");
 var closeComposer = document.querySelector("#closeComposer");
 var composerDialog = document.querySelector("#composerDialog");
 var ideaForm = document.querySelector("#ideaForm");
+var titleInput = document.querySelector("#title");
+var descriptionInput = document.querySelector("#description");
+var titleWarning = document.querySelector("#titleWarning");
+var descriptionWarning = document.querySelector("#descriptionWarning");
 var tagGroups = document.querySelector("#tagGroups");
 var customTag = document.querySelector("#customTag");
 var addCustomTag = document.querySelector("#addCustomTag");
@@ -73,6 +81,7 @@ var selectedTags = document.querySelector("#selectedTags");
 var selectedTagList = document.querySelector("#selectedTagList");
 var tagCount = document.querySelector("#tagCount");
 var tagLimit = document.querySelector("#tagLimit");
+var tagWarning = document.querySelector("#tagWarning");
 
 var ideas = load(STORAGE_KEY, starterIdeas);
 var votes = load(VOTES_KEY, {});
@@ -112,7 +121,14 @@ function approvalRate(idea) {
 }
 
 function normalizeTag(tag) {
-  return tag.trim().replace(/\s+/g, " ").slice(0, 18);
+  const cleanTag = tag.trim().replace(/\s+/g, " ").slice(0, 18);
+  if (cleanTag.toLowerCase() === "easy") return "Low effort";
+  if (cleanTag.toLowerCase() === "5 minutes") return "10 minutes";
+  return cleanTag;
+}
+
+function isCustomTag(tag) {
+  return !suggestedTags.has(normalizeTag(tag));
 }
 
 function ideaTags(idea) {
@@ -124,8 +140,18 @@ function syncTagInputs() {
   const tags = [...selectedTagSet];
   if (selectedTags) selectedTags.value = tags.join(",");
   if (tagCount) tagCount.textContent = `${tags.length}/${TAG_LIMIT}`;
+  if (tagWarning && tags.length) tagWarning.textContent = "";
   if (selectedTagList) {
-    selectedTagList.innerHTML = tags.map((tag) => `<button type="button" data-selected-tag="${escapeText(tag)}" aria-label="Remove ${escapeText(tag)} tag">${escapeText(tag)} <span aria-hidden="true">×</span></button>`).join("");
+    selectedTagList.innerHTML = tags.map((tag) => {
+      const customClass = isCustomTag(tag) ? " custom" : "";
+      return `<button class="${customClass}" type="button" data-selected-tag="${escapeText(tag)}" aria-label="Remove ${escapeText(tag)} tag">${escapeText(tag)} <span aria-hidden="true">×</span></button>`;
+    }).join("");
+  }
+  if (customTag) {
+    const atLimit = selectedTagSet.size >= TAG_LIMIT;
+    customTag.disabled = atLimit;
+    customTag.placeholder = atLimit ? "5 tags selected" : "Add custom tag";
+    if (addCustomTag) addCustomTag.disabled = atLimit;
   }
   document.querySelectorAll("[data-tag]").forEach((button) => {
     const tag = normalizeTag(button.dataset.tag || "");
@@ -139,6 +165,7 @@ function toggleTag(tag) {
   if (!cleanTag) return;
   if (selectedTagSet.has(cleanTag)) selectedTagSet.delete(cleanTag);
   else if (selectedTagSet.size < TAG_LIMIT) selectedTagSet.add(cleanTag);
+  else if (tagWarning) tagWarning.textContent = `${TAG_LIMIT} tags max`;
   syncTagInputs();
 }
 
@@ -184,6 +211,8 @@ function appendIdeaSlide(idea) {
   const description = node.querySelector("p");
   const approval = node.querySelector(".approval");
   const counts = node.querySelector(".counts");
+  const hint = node.querySelector(".vote-hint");
+  const newMarker = node.querySelector(".new-marker");
 
   if (!slide || !tags || !title || !description || !approval || !counts) {
     console.error("Ideapp idea template is missing required elements.");
@@ -192,7 +221,15 @@ function appendIdeaSlide(idea) {
 
   slide.dataset.id = idea.id;
   slide.tabIndex = 0;
-  tags.innerHTML = ideaTags(idea).map((tag, index) => `<span class="tag${index === 0 ? " primary" : ""}">${escapeText(tag)}</span>`).join("");
+  if (hint && !ideaFeed.children.length) hint.hidden = false;
+  if (newMarker && Date.now() - idea.createdAt < DAY_MS) newMarker.hidden = false;
+  slide.dataset.vote = votes[idea.id] || "";
+  tags.innerHTML = ideaTags(idea).map((tag, index) => {
+    const classes = ["tag"];
+    if (index === 0) classes.push("primary");
+    if (isCustomTag(tag)) classes.push("custom");
+    return `<span class="${classes.join(" ")}">${escapeText(tag)}</span>`;
+  }).join("");
   title.textContent = idea.title;
   description.textContent = idea.description || "No pitch added yet. Swipe with your gut.";
   approval.textContent = `${approvalRate(idea)}% yes`;
@@ -288,7 +325,6 @@ function animateVote(slide, choice) {
     updateSlideCounts(id);
     scrollToSlide(nextSlide || slide);
     slide.dataset.preview = "";
-    slide.dataset.vote = "";
   }, 170);
 }
 
@@ -297,6 +333,7 @@ function vote(id, choice) {
   if (!idea) return;
 
   const previous = votes[id];
+  lastVote = { id, previous };
   if (previous === choice) {
     idea[choice] -= 1;
     delete votes[id];
@@ -307,6 +344,27 @@ function vote(id, choice) {
   }
 
   save();
+  updateSlideCounts(id);
+  updateActionStates();
+}
+
+function undoLastVote() {
+  if (!lastVote) return;
+  const idea = ideas.find((item) => item.id === lastVote.id);
+  if (!idea) return;
+
+  const current = votes[lastVote.id];
+  if (current) idea[current] -= 1;
+  if (lastVote.previous) {
+    idea[lastVote.previous] += 1;
+    votes[lastVote.id] = lastVote.previous;
+  } else {
+    delete votes[lastVote.id];
+  }
+
+  save();
+  updateSlideCounts(lastVote.id);
+  lastVote = null;
   updateActionStates();
 }
 
@@ -317,6 +375,7 @@ function updateSlideCounts(id) {
   document.querySelectorAll(`.idea-slide[data-id="${id}"]`).forEach((slide) => {
     const approval = slide.querySelector(".approval");
     const counts = slide.querySelector(".counts");
+    slide.dataset.vote = votes[id] || "";
     if (approval) approval.textContent = `${approvalRate(idea)}% yes`;
     if (counts) counts.textContent = `${idea.yes} yes · ${idea.no} no`;
   });
@@ -334,15 +393,60 @@ function scrollToSlide(slide) {
 function updateActionStates() {
   yesButton.classList.toggle("active", votes[currentIdeaId] === "yes");
   noButton.classList.toggle("active", votes[currentIdeaId] === "no");
+  undoButton.disabled = !lastVote;
 }
 
 function openComposerDialog() {
-  resetTagPicker(["Easy", "Friends"]);
+  resetTagPicker(["Low effort", "Friends"]);
   if (typeof composerDialog.showModal === "function") {
     composerDialog.showModal();
   } else {
     composerDialog.setAttribute("open", "");
   }
+}
+
+function currentIdea() {
+  return ideas.find((idea) => idea.id === currentIdeaId);
+}
+
+function votePercents(idea) {
+  const total = idea.yes + idea.no;
+  if (!total) return { yes: 0, no: 0 };
+  const yes = Math.round((idea.yes / total) * 100);
+  return { yes, no: 100 - yes };
+}
+
+function shareText(idea) {
+  const percents = votePercents(idea);
+  return [
+    `Idea: ${idea.title}`,
+    idea.description ? `Why: ${idea.description}` : "",
+    `Tags: ${ideaTags(idea).join(", ")}`,
+    `Votes: ${percents.yes}% yes / ${percents.no}% no`
+  ].filter(Boolean).join("\n");
+}
+
+function copyCurrentIdea() {
+  const idea = currentIdea();
+  if (!idea) return;
+  const text = shareText(idea);
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text);
+  else {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    textArea.remove();
+  }
+  copyButton.classList.add("copied");
+  setTimeout(() => copyButton.classList.remove("copied"), 700);
+}
+
+function updateCharacterWarning(input, warning, threshold) {
+  if (!input || !warning) return;
+  const remaining = input.maxLength - input.value.length;
+  warning.textContent = remaining <= threshold ? `${remaining} characters left` : "";
 }
 
 function maybeExtendFeed() {
@@ -378,32 +482,29 @@ ideappShouldBoot && openComposer.addEventListener("click", openComposerDialog);
 ideappShouldBoot && closeComposer.addEventListener("click", () => composerDialog.close());
 ideappShouldBoot && yesButton.addEventListener("click", () => voteCurrent("yes"));
 ideappShouldBoot && noButton.addEventListener("click", () => voteCurrent("no"));
+ideappShouldBoot && undoButton.addEventListener("click", undoLastVote);
+ideappShouldBoot && copyButton.addEventListener("click", copyCurrentIdea);
+ideappShouldBoot && titleInput.addEventListener("input", () => updateCharacterWarning(titleInput, titleWarning, 10));
+ideappShouldBoot && descriptionInput.addEventListener("input", () => updateCharacterWarning(descriptionInput, descriptionWarning, 40));
 ideappShouldBoot && sortIdeas.addEventListener("change", render);
-
-ideappShouldBoot && seedButton.addEventListener("click", () => {
-  const existingTitles = new Set(ideas.map((idea) => idea.title));
-  const additions = starterIdeas
-    .filter((idea) => !existingTitles.has(idea.title))
-    .map((idea) => ({ ...idea, id: crypto.randomUUID(), createdAt: Date.now() - Math.floor(Math.random() * 500000) }));
-
-  ideas = [...additions, ...ideas];
-  save();
-  render();
-});
 
 ideappShouldBoot && ideaForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const formData = new FormData(ideaForm);
   const description = formData.get("description").trim();
   const tags = (formData.get("tags") || "").split(",").map(normalizeTag).filter(Boolean).slice(0, TAG_LIMIT);
+  if (!tags.length) {
+    if (tagWarning) tagWarning.textContent = "Pick at least one tag";
+    return;
+  }
 
   ideas.unshift({
     id: crypto.randomUUID(),
     title: formData.get("title").trim(),
     description,
     category: tags[0] || "Wildcard",
-    effort: tags[1] || "Easy",
-    tags: tags.length ? tags : ["Wildcard", "Easy"],
+    effort: tags[1] || "Low effort",
+    tags,
     createdAt: Date.now(),
     yes: 0,
     no: 0
@@ -421,9 +522,17 @@ ideappShouldBoot && window.addEventListener("keydown", (event) => {
   const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) || event.target.isContentEditable;
   if (isTyping || composerDialog.open) return;
 
-  if (event.key === "ArrowRight") voteCurrent("yes");
-  if (event.key === "ArrowLeft") voteCurrent("no");
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    voteCurrent("yes");
+  }
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    voteCurrent("no");
+  }
 });
 
 syncTagInputs();
+updateCharacterWarning(titleInput, titleWarning, 10);
+updateCharacterWarning(descriptionInput, descriptionWarning, 40);
 ideappShouldBoot && render();

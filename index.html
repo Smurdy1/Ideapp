@@ -33,8 +33,11 @@
       <button class="action-button no" id="noButton" type="button" aria-label="Vote no on current idea">
         <span aria-hidden="true">×</span>
       </button>
-      <button class="action-button" id="seedButton" type="button" aria-label="Add sample ideas">
-        <span aria-hidden="true">↻</span>
+      <button class="action-button" id="undoButton" type="button" aria-label="Undo last vote">
+        <span aria-hidden="true">↶</span>
+      </button>
+      <button class="action-button" id="copyButton" type="button" aria-label="Copy current idea">
+        <span aria-hidden="true">⧉</span>
       </button>
     </aside>
   </main>
@@ -51,9 +54,11 @@
 
       <label for="title">Activity</label>
       <input id="title" name="title" maxlength="72" placeholder="Midnight bakery crawl" required />
+      <span class="field-warning" id="titleWarning" aria-live="polite"></span>
 
       <label for="description">Why it could be memorable <span>optional</span></label>
       <textarea id="description" name="description" maxlength="280" placeholder="Add the little detail that makes this worth leaving the couch for."></textarea>
+      <span class="field-warning" id="descriptionWarning" aria-live="polite"></span>
 
       <section class="tag-builder" aria-labelledby="tagBuilderTitle">
         <div class="tag-builder-head">
@@ -76,8 +81,8 @@
           </div>
           <div class="tag-group" aria-label="Plan tags">
             <span>Plan</span>
-            <button type="button" data-tag="5 minutes">5 minutes</button>
-            <button type="button" data-tag="Easy">Easy</button>
+            <button type="button" data-tag="10 minutes">10 minutes</button>
+            <button type="button" data-tag="Low effort">Low effort</button>
             <button type="button" data-tag="All day">All day</button>
             <button type="button" data-tag="Plan ahead">Plan ahead</button>
             <button type="button" data-tag="No money">No money</button>
@@ -97,6 +102,7 @@
           <button class="tag-add-button" id="addCustomTag" type="button">Add</button>
         </div>
         <div class="selected-tag-list" id="selectedTagList" aria-live="polite"></div>
+        <span class="tag-warning" id="tagWarning" aria-live="polite"></span>
         <input id="selectedTags" name="tags" type="hidden" />
       </section>
 
@@ -112,7 +118,9 @@
       </div>
       <div class="idea-backdrop" aria-hidden="true"></div>
       <section class="idea-content">
+        <div class="vote-hint" hidden>Drag right for yes · left for no · or use ← →</div>
         <div class="idea-copy">
+          <span class="new-marker" hidden>New</span>
           <div class="tags meta"></div>
           <h2></h2>
           <h3 class="legacy-title" hidden></h3>

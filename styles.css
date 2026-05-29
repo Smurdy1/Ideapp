@@ -207,6 +207,33 @@ button { border: 0; }
   padding: 96px min(136px, 18vw) 108px max(20px, 6vw);
 }
 
+.vote-hint {
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
+  font-size: 0.88rem;
+  font-weight: 780;
+  letter-spacing: 0.012em;
+}
+
+.new-marker {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--teal);
+  padding: 5px 9px;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -230,6 +257,7 @@ button { border: 0; }
 
 .tag.coral { background: rgba(255, 112, 91, 0.24); }
 .tag.primary { background: rgba(12, 143, 139, 0.34); }
+.tag.custom { background: rgba(255, 229, 158, 0.2); border-color: rgba(255, 229, 158, 0.36); }
 
 .idea-copy h2 {
   max-width: 790px;
@@ -297,6 +325,17 @@ button { border: 0; }
 
 .action-button:hover,
 .action-button.active { transform: translateY(-2px) scale(1.04); }
+
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+  transform: none;
+}
+
+.action-button.copied {
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+}
 
 .action-button.yes:hover,
 .action-button.yes.active {
@@ -410,6 +449,16 @@ textarea:focus,
   box-shadow: 0 0 0 4px rgba(12, 143, 139, 0.13);
 }
 
+.field-warning,
+.tag-warning {
+  display: block;
+  min-height: 1rem;
+  margin-top: 3px;
+  color: var(--red-deep);
+  font-size: 0.75rem;
+  font-weight: 820;
+}
+
 .tag-builder {
   margin-top: 10px;
   border: 1px solid rgba(5, 61, 59, 0.14);
@@ -481,7 +530,8 @@ textarea:focus,
   color: white;
 }
 
-.tag-group button:disabled {
+.tag-group button:disabled,
+.tag-add-button:disabled {
   cursor: not-allowed;
   opacity: 0.38;
 }
@@ -498,6 +548,12 @@ textarea:focus,
 .custom-tag-row input.used,
 .custom-tag-row input:not(:placeholder-shown) {
   background: #ecefed;
+}
+
+.custom-tag-row input:disabled {
+  background: #ecefed;
+  color: rgba(16, 40, 39, 0.5);
+  cursor: not-allowed;
 }
 
 .selected-tag-list {
@@ -519,6 +575,11 @@ textarea:focus,
   color: var(--ink);
   padding: 6px 9px;
   font-weight: 850;
+}
+
+.selected-tag-list button.custom {
+  border-color: rgba(178, 128, 0, 0.22);
+  background: rgba(255, 229, 158, 0.42);
 }
 
 .selected-tag-list span {
