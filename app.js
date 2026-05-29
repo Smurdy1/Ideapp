@@ -1,4 +1,5 @@
 // Guard against duplicate script execution after conflict resolution.
+if (!globalThis.__ideappInitialized) {
 (function initIdeapp() {
 if (globalThis.__ideappInitialized) return;
 ideappBoot: {
