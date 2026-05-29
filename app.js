@@ -70,6 +70,7 @@ var tagGroups = document.querySelector("#tagGroups");
 var customTag = document.querySelector("#customTag");
 var addCustomTag = document.querySelector("#addCustomTag");
 var selectedTags = document.querySelector("#selectedTags");
+var selectedTagList = document.querySelector("#selectedTagList");
 var tagCount = document.querySelector("#tagCount");
 var tagLimit = document.querySelector("#tagLimit");
 
@@ -123,6 +124,9 @@ function syncTagInputs() {
   const tags = [...selectedTagSet];
   if (selectedTags) selectedTags.value = tags.join(",");
   if (tagCount) tagCount.textContent = `${tags.length}/${TAG_LIMIT}`;
+  if (selectedTagList) {
+    selectedTagList.innerHTML = tags.map((tag) => `<button type="button" data-selected-tag="${escapeText(tag)}" aria-label="Remove ${escapeText(tag)} tag">${escapeText(tag)} <span aria-hidden="true">×</span></button>`).join("");
+  }
   document.querySelectorAll("[data-tag]").forEach((button) => {
     const tag = normalizeTag(button.dataset.tag || "");
     button.classList.toggle("selected", selectedTagSet.has(tag));
@@ -140,6 +144,7 @@ function toggleTag(tag) {
 
 function resetTagPicker(defaultTags = []) {
   selectedTagSet = new Set(defaultTags.map((tag) => normalizeTag(tag)).filter(Boolean).slice(0, TAG_LIMIT));
+  if (customTag) customTag.classList.remove("used");
   syncTagInputs();
 }
 
@@ -352,15 +357,21 @@ ideappShouldBoot && tagGroups.addEventListener("click", (event) => {
   const button = event.target.closest("[data-tag]");
   if (button) toggleTag(button.dataset.tag);
 });
+ideappShouldBoot && selectedTagList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-selected-tag]");
+  if (button) toggleTag(button.dataset.selectedTag);
+});
 ideappShouldBoot && addCustomTag.addEventListener("click", () => {
   toggleTag(customTag.value);
   customTag.value = "";
+  customTag.classList.add("used");
 });
 ideappShouldBoot && customTag.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     toggleTag(customTag.value);
     customTag.value = "";
+    customTag.classList.add("used");
   }
 });
 ideappShouldBoot && openComposer.addEventListener("click", openComposerDialog);

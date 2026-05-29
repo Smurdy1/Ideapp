@@ -495,6 +495,37 @@ textarea:focus,
 
 .custom-tag-row input { min-width: 0; }
 
+.custom-tag-row input.used,
+.custom-tag-row input:not(:placeholder-shown) {
+  background: #ecefed;
+}
+
+.selected-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 30px;
+  margin-top: 8px;
+}
+
+.selected-tag-list:empty {
+  display: none;
+}
+
+.selected-tag-list button {
+  border: 1px solid rgba(12, 143, 139, 0.22);
+  border-radius: 999px;
+  background: rgba(12, 143, 139, 0.12);
+  color: var(--ink);
+  padding: 6px 9px;
+  font-weight: 850;
+}
+
+.selected-tag-list span {
+  color: var(--red-deep);
+  margin-left: 3px;
+}
+
 .tag-add-button {
   background: var(--ink);
   color: white;
@@ -573,6 +604,8 @@ textarea:focus,
   .tag-group button,
   .tag-add-button { padding: 6px 8px; font-size: 0.82rem; }
   .custom-tag-row { margin-top: 6px; }
+  .selected-tag-list { min-height: 26px; margin-top: 6px; }
+  .selected-tag-list button { padding: 5px 8px; font-size: 0.82rem; }
   .submit-button { margin-top: 8px; padding: 10px 14px; }
 }
 
