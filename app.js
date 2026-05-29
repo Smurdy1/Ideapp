@@ -4,7 +4,8 @@ globalThis.__ideappInitialized = true;
 
 var STORAGE_KEY = "ideappActivityIdeas.v1";
 var VOTES_KEY = "ideappActivityVotes.v1";
-var SWIPE_THRESHOLD = 96;
+var SWIPE_THRESHOLD = 120;
+var renderedOrder = [];
 
 var starterIdeas = [
   {
@@ -59,12 +60,11 @@ var openComposer = document.querySelector("#openComposer");
 var closeComposer = document.querySelector("#closeComposer");
 var composerDialog = document.querySelector("#composerDialog");
 var ideaForm = document.querySelector("#ideaForm");
-var userType = document.querySelector("#userType");
-var feedPulse = document.querySelector("#feedPulse");
 
 var ideas = load(STORAGE_KEY, starterIdeas);
 var votes = load(VOTES_KEY, {});
 var currentIdeaId = null;
+var currentSlide = null;
 
 function load(key, fallback) {
   try {
@@ -97,28 +97,11 @@ function approvalRate(idea) {
   return total ? Math.round((idea.yes / total) * 100) : 0;
 }
 
-function judgementFor(idea) {
-  const total = idea.yes + idea.no;
-  const approval = approvalRate(idea);
-  const tags = [];
-
-  if (total < 3) tags.push("New drop");
-  else if (approval >= 78) tags.push("Crowd wants this");
-  else if (approval <= 35) tags.push("Niche adventure");
-  else tags.push("Debate bait");
-
-  if (["5 minutes", "Easy", "No money"].includes(idea.effort) && approval >= 58) tags.push("Low-friction yes");
-  if (["Full send", "All day", "Plan ahead"].includes(idea.effort) && approval >= 58) tags.push("Memory maker");
-  if (idea.no > idea.yes) tags.push("Needs a twist");
-
-  return tags;
-}
-
 function render() {
   ideaFeed.innerHTML = "";
-  const orderedIdeas = sortedIdeas();
+  renderedOrder = sortedIdeas();
 
-  if (!orderedIdeas.length) {
+  if (!renderedOrder.length) {
     ideaFeed.innerHTML = `
       <section class="empty-feed">
         <div>
@@ -128,43 +111,45 @@ function render() {
       </section>
     `;
     currentIdeaId = null;
-    updateInsights();
+    currentSlide = null;
     return;
   }
 
-  orderedIdeas.forEach((idea, index) => {
-    const node = ideaTemplate.content.cloneNode(true);
-    const slide = node.querySelector(".idea-slide");
-    const tags = node.querySelector(".tags");
-    const title = node.querySelector("h2");
-    const description = node.querySelector("p");
-    const judgements = node.querySelector(".judgements");
-    const approval = node.querySelector(".approval");
-    const counts = node.querySelector(".counts");
-
-    if (!slide || !tags || !title || !description || !judgements || !approval || !counts) {
-      console.error("Ideapp idea template is missing required elements.");
-      return;
-    }
-
-    slide.id = index === 0 ? "top" : `idea-${idea.id}`;
-    slide.dataset.id = idea.id;
-    slide.tabIndex = 0;
-    tags.innerHTML = `<span class="tag">${escapeText(idea.category)}</span><span class="tag coral">${escapeText(idea.effort)}</span>`;
-    title.textContent = idea.title;
-    description.textContent = idea.description || "No pitch added yet. Swipe with your gut.";
-    judgements.innerHTML = judgementFor(idea).map((tag) => `<span class="judgement">${escapeText(tag)}</span>`).join("");
-    approval.textContent = `${approvalRate(idea)}% yes`;
-    counts.textContent = `${idea.yes} yes · ${idea.no} no`;
-
-    attachSwipeHandlers(slide);
-    ideaFeed.appendChild(node);
-  });
-
+  appendIdeaSlides(3);
   observeCurrentSlide();
-  updateInsights();
 }
 
+function appendIdeaSlides(cycles = 1) {
+  for (let cycle = 0; cycle < cycles; cycle += 1) {
+    renderedOrder.forEach((idea) => appendIdeaSlide(idea));
+  }
+}
+
+function appendIdeaSlide(idea) {
+  const node = ideaTemplate.content.cloneNode(true);
+  const slide = node.querySelector(".idea-slide");
+  const tags = node.querySelector(".tags");
+  const title = node.querySelector("h2");
+  const description = node.querySelector("p");
+  const approval = node.querySelector(".approval");
+  const counts = node.querySelector(".counts");
+
+  if (!slide || !tags || !title || !description || !approval || !counts) {
+    console.error("Ideapp idea template is missing required elements.");
+    return;
+  }
+
+  slide.dataset.id = idea.id;
+  slide.tabIndex = 0;
+  tags.innerHTML = `<span class="tag">${escapeText(idea.category)}</span><span class="tag coral">${escapeText(idea.effort)}</span>`;
+  title.textContent = idea.title;
+  description.textContent = idea.description || "No pitch added yet. Swipe with your gut.";
+  approval.textContent = `${approvalRate(idea)}% yes`;
+  counts.textContent = `${idea.yes} yes · ${idea.no} no`;
+
+  attachSwipeHandlers(slide);
+  ideaFeed.appendChild(node);
+}
 function escapeText(text) {
   const element = document.createElement("span");
   element.textContent = text;
@@ -188,14 +173,8 @@ function attachSwipeHandlers(slide) {
   slide.addEventListener("pointermove", (event) => {
     if (pointerId !== event.pointerId) return;
     currentX = event.clientX - startX;
-    const clamped = Math.max(-150, Math.min(150, currentX));
-    const opacity = Math.min(1, Math.abs(clamped) / SWIPE_THRESHOLD);
-    slide.style.setProperty("--drag-x", `${clamped}px`);
-    slide.style.setProperty("--drag-rotate", `${clamped / 18}deg`);
-    slide.style.setProperty("--stamp-opacity", opacity.toFixed(2));
-    slide.style.setProperty("--stamp-rotate", currentX > 0 ? "-12deg" : "12deg");
-    slide.classList.toggle("dragging-yes", currentX > 16);
-    slide.classList.toggle("dragging-no", currentX < -16);
+    const choice = Math.abs(currentX) > SWIPE_THRESHOLD ? (currentX > 0 ? "yes" : "no") : "";
+    slide.dataset.preview = choice;
   });
 
   slide.addEventListener("pointerup", (event) => finishSwipe(event.pointerId));
@@ -204,7 +183,7 @@ function attachSwipeHandlers(slide) {
   function finishSwipe(endedPointerId) {
     if (pointerId !== endedPointerId) return;
     slide.releasePointerCapture(pointerId);
-    slide.classList.remove("is-dragging", "dragging-yes", "dragging-no");
+    slide.classList.remove("is-dragging");
     pointerId = null;
 
     if (currentX > SWIPE_THRESHOLD) {
@@ -217,47 +196,48 @@ function attachSwipeHandlers(slide) {
       return;
     }
 
-    slide.style.removeProperty("--drag-x");
-    slide.style.removeProperty("--drag-rotate");
-    slide.style.removeProperty("--stamp-opacity");
+    slide.dataset.preview = "";
   }
 }
-
 function observeCurrentSlide() {
+  syncCurrentSlide();
+}
+
+function syncCurrentSlide() {
   const slides = [...document.querySelectorAll(".idea-slide")];
   if (!slides.length) return;
 
-  const observer = new IntersectionObserver((entries) => {
-    const visible = entries
-      .filter((entry) => entry.isIntersecting)
-      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+  const feedTop = ideaFeed.getBoundingClientRect().top;
+  const closest = slides.reduce((best, slide) => {
+    const distance = Math.abs(slide.getBoundingClientRect().top - feedTop);
+    return distance < best.distance ? { slide, distance } : best;
+  }, { slide: slides[0], distance: Infinity }).slide;
 
-    if (visible) {
-      currentIdeaId = visible.target.dataset.id;
-      updateActionStates();
-    }
-  }, { root: ideaFeed, threshold: [0.55, 0.8] });
-
-  slides.forEach((slide) => observer.observe(slide));
-  currentIdeaId = slides[0].dataset.id;
+  currentSlide = closest;
+  currentIdeaId = closest.dataset.id;
   updateActionStates();
 }
-
 function voteCurrent(choice) {
-  const slide = document.querySelector(`.idea-slide[data-id="${currentIdeaId}"]`);
+  const slide = currentSlide || document.querySelector(`.idea-slide[data-id="${currentIdeaId}"]`);
   if (!slide) return;
   animateVote(slide, choice);
 }
 
 function animateVote(slide, choice) {
   const id = slide.dataset.id;
-  const nextSlide = slide.nextElementSibling;
-  const nextId = nextSlide?.dataset.id || id;
+  let nextSlide = slide.nextElementSibling;
+  if (!nextSlide) {
+    appendIdeaSlides(1);
+    nextSlide = slide.nextElementSibling;
+  }
+  slide.dataset.preview = choice;
   slide.dataset.vote = choice;
   setTimeout(() => {
     vote(id, choice);
-    render();
-    scrollToIdea(nextId);
+    updateSlideCounts(id);
+    scrollToSlide(nextSlide || slide);
+    slide.dataset.preview = "";
+    slide.dataset.vote = "";
   }, 170);
 }
 
@@ -276,16 +256,26 @@ function vote(id, choice) {
   }
 
   save();
-  updateInsights();
   updateActionStates();
 }
 
-function scrollToIdea(id) {
-  const slide = document.querySelector(`.idea-slide[data-id="${id}"]`);
+function updateSlideCounts(id) {
+  const idea = ideas.find((item) => item.id === id);
+  if (!idea) return;
 
+  document.querySelectorAll(`.idea-slide[data-id="${id}"]`).forEach((slide) => {
+    const approval = slide.querySelector(".approval");
+    const counts = slide.querySelector(".counts");
+    if (approval) approval.textContent = `${approvalRate(idea)}% yes`;
+    if (counts) counts.textContent = `${idea.yes} yes · ${idea.no} no`;
+  });
+}
+
+function scrollToSlide(slide) {
   if (slide) {
     slide.scrollIntoView({ behavior: "auto", block: "start" });
-    currentIdeaId = id;
+    currentSlide = slide;
+    currentIdeaId = slide.dataset.id;
     updateActionStates();
   }
 }
@@ -293,22 +283,6 @@ function scrollToIdea(id) {
 function updateActionStates() {
   yesButton.classList.toggle("active", votes[currentIdeaId] === "yes");
   noButton.classList.toggle("active", votes[currentIdeaId] === "no");
-}
-
-function updateInsights() {
-  const personalVotes = Object.values(votes);
-  const yesVotes = personalVotes.filter((voteValue) => voteValue === "yes").length;
-  const noVotes = personalVotes.length - yesVotes;
-  const averageApproval = ideas.length
-    ? Math.round(ideas.reduce((sum, idea) => sum + approvalRate(idea), 0) / ideas.length)
-    : 0;
-
-  if (!personalVotes.length) userType.textContent = "Still deciding";
-  else if (yesVotes / personalVotes.length >= 0.7) userType.textContent = "Adventure magnet";
-  else if (noVotes / personalVotes.length >= 0.7) userType.textContent = "Sharp curator";
-  else userType.textContent = "Balanced scout";
-
-  feedPulse.textContent = ideas.length ? `${ideas.length} ideas · ${averageApproval}% average yes` : "Fresh start";
 }
 
 function openComposerDialog() {
@@ -319,6 +293,14 @@ function openComposerDialog() {
   }
 }
 
+function maybeExtendFeed() {
+  if (!renderedOrder.length) return;
+  const remaining = ideaFeed.scrollHeight - ideaFeed.scrollTop - ideaFeed.clientHeight;
+  if (remaining < ideaFeed.clientHeight * 1.5) appendIdeaSlides(2);
+  syncCurrentSlide();
+}
+
+ideappShouldBoot && ideaFeed.addEventListener("scroll", maybeExtendFeed);
 ideappShouldBoot && openComposer.addEventListener("click", openComposerDialog);
 ideappShouldBoot && closeComposer.addEventListener("click", () => composerDialog.close());
 ideappShouldBoot && yesButton.addEventListener("click", () => voteCurrent("yes"));

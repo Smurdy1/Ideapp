@@ -29,27 +29,13 @@
     <aside class="right-edge" aria-label="Voting actions">
       <button class="action-button yes" id="yesButton" type="button" aria-label="Vote yes on current idea">
         <span aria-hidden="true">✓</span>
-        <small>yes</small>
       </button>
       <button class="action-button no" id="noButton" type="button" aria-label="Vote no on current idea">
         <span aria-hidden="true">×</span>
-        <small>no</small>
       </button>
       <button class="action-button" id="seedButton" type="button" aria-label="Add sample ideas">
         <span aria-hidden="true">↻</span>
-        <small>seed</small>
       </button>
-    </aside>
-
-    <aside class="bottom-edge" aria-live="polite">
-      <div>
-        <span class="micro-label">Your read</span>
-        <strong id="userType">Still deciding</strong>
-      </div>
-      <div>
-        <span class="micro-label">Feed pulse</span>
-        <strong id="feedPulse">Fresh start</strong>
-      </div>
     </aside>
   </main>
 
@@ -60,7 +46,7 @@
           <p class="micro-label">Post to Ideapp</p>
           <h1 id="composerTitle">Drop an idea</h1>
         </div>
-        <button class="plain-button" id="closeComposer" type="button" aria-label="Close composer">Close</button>
+        <button class="close-button" id="closeComposer" type="button" aria-label="Close composer"><span aria-hidden="true">×</span></button>
       </div>
 
       <label for="title">Activity</label>
@@ -108,8 +94,10 @@
 
   <template id="ideaTemplate">
     <article class="idea-slide">
-      <div class="vote-stamp yes-stamp yes">YES</div>
-      <div class="vote-stamp no-stamp no">NO</div>
+      <div class="vote-fields" aria-hidden="true">
+        <div class="vote-field vote-field-yes">YES</div>
+        <div class="vote-field vote-field-no">NO</div>
+      </div>
       <div class="idea-backdrop" aria-hidden="true"></div>
       <section class="idea-content">
         <div class="idea-copy">
@@ -117,7 +105,6 @@
           <h2></h2>
           <h3 class="legacy-title" hidden></h3>
           <p></p>
-          <div class="judgements judgement"></div>
         </div>
         <div class="idea-stats">
           <span class="approval"></span>
