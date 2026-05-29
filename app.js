@@ -1,5 +1,9 @@
 // Guard against duplicate script execution after conflict resolution.
 if (!globalThis.__ideappInitialized) {
+(function initIdeapp() {
+if (globalThis.__ideappInitialized) return;
+ideappBoot: {
+if (globalThis.__ideappInitialized) break ideappBoot;
 globalThis.__ideappInitialized = true;
 
 const STORAGE_KEY = "ideappActivityIdeas.v1";
@@ -366,4 +370,5 @@ window.addEventListener("keydown", (event) => {
 });
 
 render();
+})();
 }
