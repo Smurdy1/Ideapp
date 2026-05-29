@@ -5,7 +5,9 @@ globalThis.__ideappInitialized = true;
 var STORAGE_KEY = "ideappActivityIdeas.v1";
 var VOTES_KEY = "ideappActivityVotes.v1";
 var SWIPE_THRESHOLD = 120;
+var TAG_LIMIT = 5;
 var renderedOrder = [];
+var selectedTagSet = new Set();
 
 var starterIdeas = [
   {
@@ -14,6 +16,7 @@ var starterIdeas = [
     description: "Find three public staircases in an older neighborhood, climb them before sunset, then end with tacos or ice cream.",
     category: "Outdoors",
     effort: "Easy",
+    tags: ["Outdoors", "Easy", "Food"],
     createdAt: Date.now() - 360000,
     yes: 18,
     no: 4
@@ -24,6 +27,7 @@ var starterIdeas = [
     description: "Ride to a stop you never use. Spend exactly one hour finding the best photo, bite, and weird little detail.",
     category: "Wildcard",
     effort: "Medium",
+    tags: ["Wildcard", "Transit", "One hour"],
     createdAt: Date.now() - 250000,
     yes: 23,
     no: 7
@@ -34,6 +38,7 @@ var starterIdeas = [
     description: "Everyone gets ten dollars to buy an outfit and one mystery DVD. Wear the outfit while watching the winner.",
     category: "Creative",
     effort: "Bring friends",
+    tags: ["Creative", "Friends", "No money"],
     createdAt: Date.now() - 190000,
     yes: 16,
     no: 8
@@ -44,6 +49,7 @@ var starterIdeas = [
     description: "A cold early dip, warm coffee, and a booth where everyone gets the biggest pancake on the menu.",
     category: "Adrenaline",
     effort: "Plan ahead",
+    tags: ["Adrenaline", "Plan ahead", "Food"],
     createdAt: Date.now() - 120000,
     yes: 28,
     no: 5
@@ -60,11 +66,18 @@ var openComposer = document.querySelector("#openComposer");
 var closeComposer = document.querySelector("#closeComposer");
 var composerDialog = document.querySelector("#composerDialog");
 var ideaForm = document.querySelector("#ideaForm");
+var tagGroups = document.querySelector("#tagGroups");
+var customTag = document.querySelector("#customTag");
+var addCustomTag = document.querySelector("#addCustomTag");
+var selectedTags = document.querySelector("#selectedTags");
+var tagCount = document.querySelector("#tagCount");
+var tagLimit = document.querySelector("#tagLimit");
 
 var ideas = load(STORAGE_KEY, starterIdeas);
 var votes = load(VOTES_KEY, {});
 var currentIdeaId = null;
 var currentSlide = null;
+if (tagLimit) tagLimit.textContent = TAG_LIMIT;
 
 function load(key, fallback) {
   try {
@@ -95,6 +108,39 @@ function score(idea) {
 function approvalRate(idea) {
   const total = idea.yes + idea.no;
   return total ? Math.round((idea.yes / total) * 100) : 0;
+}
+
+function normalizeTag(tag) {
+  return tag.trim().replace(/\s+/g, " ").slice(0, 18);
+}
+
+function ideaTags(idea) {
+  const tags = Array.isArray(idea.tags) ? idea.tags : [idea.category, idea.effort];
+  return [...new Set(tags.map((tag) => normalizeTag(String(tag || ""))).filter(Boolean))].slice(0, TAG_LIMIT);
+}
+
+function syncTagInputs() {
+  const tags = [...selectedTagSet];
+  if (selectedTags) selectedTags.value = tags.join(",");
+  if (tagCount) tagCount.textContent = `${tags.length}/${TAG_LIMIT}`;
+  document.querySelectorAll("[data-tag]").forEach((button) => {
+    const tag = normalizeTag(button.dataset.tag || "");
+    button.classList.toggle("selected", selectedTagSet.has(tag));
+    button.disabled = !selectedTagSet.has(tag) && selectedTagSet.size >= TAG_LIMIT;
+  });
+}
+
+function toggleTag(tag) {
+  const cleanTag = normalizeTag(tag);
+  if (!cleanTag) return;
+  if (selectedTagSet.has(cleanTag)) selectedTagSet.delete(cleanTag);
+  else if (selectedTagSet.size < TAG_LIMIT) selectedTagSet.add(cleanTag);
+  syncTagInputs();
+}
+
+function resetTagPicker(defaultTags = []) {
+  selectedTagSet = new Set(defaultTags.map((tag) => normalizeTag(tag)).filter(Boolean).slice(0, TAG_LIMIT));
+  syncTagInputs();
 }
 
 function render() {
@@ -141,7 +187,7 @@ function appendIdeaSlide(idea) {
 
   slide.dataset.id = idea.id;
   slide.tabIndex = 0;
-  tags.innerHTML = `<span class="tag">${escapeText(idea.category)}</span><span class="tag coral">${escapeText(idea.effort)}</span>`;
+  tags.innerHTML = ideaTags(idea).map((tag, index) => `<span class="tag${index === 0 ? " primary" : ""}">${escapeText(tag)}</span>`).join("");
   title.textContent = idea.title;
   description.textContent = idea.description || "No pitch added yet. Swipe with your gut.";
   approval.textContent = `${approvalRate(idea)}% yes`;
@@ -286,6 +332,7 @@ function updateActionStates() {
 }
 
 function openComposerDialog() {
+  resetTagPicker(["Easy", "Friends"]);
   if (typeof composerDialog.showModal === "function") {
     composerDialog.showModal();
   } else {
@@ -301,6 +348,21 @@ function maybeExtendFeed() {
 }
 
 ideappShouldBoot && ideaFeed.addEventListener("scroll", maybeExtendFeed);
+ideappShouldBoot && tagGroups.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-tag]");
+  if (button) toggleTag(button.dataset.tag);
+});
+ideappShouldBoot && addCustomTag.addEventListener("click", () => {
+  toggleTag(customTag.value);
+  customTag.value = "";
+});
+ideappShouldBoot && customTag.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    toggleTag(customTag.value);
+    customTag.value = "";
+  }
+});
 ideappShouldBoot && openComposer.addEventListener("click", openComposerDialog);
 ideappShouldBoot && closeComposer.addEventListener("click", () => composerDialog.close());
 ideappShouldBoot && yesButton.addEventListener("click", () => voteCurrent("yes"));
@@ -322,19 +384,22 @@ ideappShouldBoot && ideaForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const formData = new FormData(ideaForm);
   const description = formData.get("description").trim();
+  const tags = (formData.get("tags") || "").split(",").map(normalizeTag).filter(Boolean).slice(0, TAG_LIMIT);
 
   ideas.unshift({
     id: crypto.randomUUID(),
     title: formData.get("title").trim(),
     description,
-    category: formData.get("category"),
-    effort: formData.get("effort"),
+    category: tags[0] || "Wildcard",
+    effort: tags[1] || "Easy",
+    tags: tags.length ? tags : ["Wildcard", "Easy"],
     createdAt: Date.now(),
     yes: 0,
     no: 0
   });
 
   ideaForm.reset();
+  resetTagPicker();
   composerDialog.close();
   save();
   render();
@@ -347,4 +412,5 @@ ideappShouldBoot && window.addEventListener("keydown", (event) => {
   if (event.key.toLowerCase() === "n") openComposerDialog();
 });
 
+syncTagInputs();
 ideappShouldBoot && render();

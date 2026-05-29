@@ -229,6 +229,7 @@ button { border: 0; }
 }
 
 .tag.coral { background: rgba(255, 112, 91, 0.24); }
+.tag.primary { background: rgba(12, 143, 139, 0.34); }
 
 .idea-copy h2 {
   max-width: 790px;
@@ -406,6 +407,97 @@ textarea:focus,
 .composer select:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 4px rgba(12, 143, 139, 0.13);
+}
+
+.tag-builder {
+  margin-top: 16px;
+  border: 1px solid rgba(5, 61, 59, 0.14);
+  border-radius: 22px;
+  background: rgba(12, 143, 139, 0.07);
+  padding: 14px;
+}
+
+.tag-builder-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.tag-builder-head label { margin: 0 0 4px; }
+
+.tag-builder-head p {
+  margin: 0;
+  color: rgba(16, 40, 39, 0.62);
+  line-height: 1.4;
+}
+
+#tagCount {
+  border-radius: 999px;
+  background: white;
+  color: var(--teal);
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.tag-groups {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.tag-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tag-group > span {
+  width: 58px;
+  color: rgba(16, 40, 39, 0.58);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tag-group button,
+.tag-add-button {
+  border-radius: 999px;
+  border: 1px solid rgba(5, 61, 59, 0.16);
+  background: white;
+  color: var(--ink);
+  padding: 9px 12px;
+  font-weight: 820;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+
+.tag-group button.selected {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+}
+
+.tag-group button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.custom-tag-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.custom-tag-row input { min-width: 0; }
+
+.tag-add-button {
+  background: var(--ink);
+  color: white;
+  padding-inline: 16px;
 }
 
 .form-grid {

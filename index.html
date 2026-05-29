@@ -55,38 +55,49 @@
       <label for="description">Why it could be memorable <span>optional</span></label>
       <textarea id="description" name="description" maxlength="280" placeholder="Add the little detail that makes this worth leaving the couch for."></textarea>
 
-      <div class="form-grid">
-        <div>
-          <label for="category">Mood</label>
-          <select id="category" name="category">
-            <option>Outdoors</option>
-            <option>Food</option>
-            <option>Creative</option>
-            <option>Night</option>
-            <option>Low-key</option>
-            <option>Wildcard</option>
-            <option>Adrenaline</option>
-            <option>Cozy</option>
-            <option>Social</option>
-            <option>Solo</option>
-            <option>Cheap</option>
-            <option>Road trip</option>
-          </select>
+      <section class="tag-builder" aria-labelledby="tagBuilderTitle">
+        <div class="tag-builder-head">
+          <div>
+            <label id="tagBuilderTitle">Tags</label>
+            <p>Pick up to <strong id="tagLimit">5</strong> so people instantly get the vibe.</p>
+          </div>
+          <strong id="tagCount">0/5</strong>
         </div>
-        <div>
-          <label for="effort">Effort</label>
-          <select id="effort" name="effort">
-            <option>5 minutes</option>
-            <option>Easy</option>
-            <option>Medium</option>
-            <option>Full send</option>
-            <option>All day</option>
-            <option>Plan ahead</option>
-            <option>No money</option>
-            <option>Bring friends</option>
-          </select>
+
+        <div class="tag-groups" id="tagGroups" aria-label="Suggested tags">
+          <div class="tag-group" aria-label="Mood tags">
+            <span>Mood</span>
+            <button type="button" data-tag="Outdoors">Outdoors</button>
+            <button type="button" data-tag="Food">Food</button>
+            <button type="button" data-tag="Creative">Creative</button>
+            <button type="button" data-tag="Night">Night</button>
+            <button type="button" data-tag="Cozy">Cozy</button>
+            <button type="button" data-tag="Adrenaline">Adrenaline</button>
+          </div>
+          <div class="tag-group" aria-label="Plan tags">
+            <span>Plan</span>
+            <button type="button" data-tag="5 minutes">5 minutes</button>
+            <button type="button" data-tag="Easy">Easy</button>
+            <button type="button" data-tag="All day">All day</button>
+            <button type="button" data-tag="Plan ahead">Plan ahead</button>
+            <button type="button" data-tag="No money">No money</button>
+            <button type="button" data-tag="Road trip">Road trip</button>
+          </div>
+          <div class="tag-group" aria-label="People tags">
+            <span>People</span>
+            <button type="button" data-tag="Solo">Solo</button>
+            <button type="button" data-tag="Date">Date</button>
+            <button type="button" data-tag="Friends">Friends</button>
+            <button type="button" data-tag="Family">Family</button>
+          </div>
         </div>
-      </div>
+
+        <div class="custom-tag-row">
+          <input id="customTag" maxlength="18" placeholder="Add custom tag" aria-label="Add custom tag" />
+          <button class="tag-add-button" id="addCustomTag" type="button">Add</button>
+        </div>
+        <input id="selectedTags" name="tags" type="hidden" />
+      </section>
 
       <button class="submit-button" type="submit">Post idea</button>
     </form>
