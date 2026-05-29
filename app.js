@@ -418,9 +418,11 @@ ideappShouldBoot && ideaForm.addEventListener("submit", (event) => {
 });
 
 ideappShouldBoot && window.addEventListener("keydown", (event) => {
+  const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName) || event.target.isContentEditable;
+  if (isTyping || composerDialog.open) return;
+
   if (event.key === "ArrowRight") voteCurrent("yes");
   if (event.key === "ArrowLeft") voteCurrent("no");
-  if (event.key.toLowerCase() === "n") openComposerDialog();
 });
 
 syncTagInputs();
