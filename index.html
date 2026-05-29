@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Ideapp is a swipeable feed for posting, discovering, and voting on memorable activity ideas." />
   <title>Ideapp — Adventure Ideas</title>
+  <link rel="stylesheet" href="styles.css?v=20260529-fix2" />
   <link rel="stylesheet" href="styles.css?v=20260528-fix1" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -109,6 +110,21 @@
 
   <template id="ideaTemplate">
     <article class="idea-slide">
+      <div class="vote-stamp yes-stamp yes">YES</div>
+      <div class="vote-stamp no-stamp no">NO</div>
+      <div class="idea-backdrop" aria-hidden="true"></div>
+      <section class="idea-content">
+        <div class="idea-copy">
+          <div class="tags meta"></div>
+          <h2></h2>
+          <h3 class="legacy-title" hidden></h3>
+          <p></p>
+          <div class="judgements judgement"></div>
+        </div>
+        <div class="idea-stats">
+          <span class="approval"></span>
+          <span class="counts score"></span>
+          <button class="delete legacy-delete" type="button" aria-hidden="true" tabindex="-1">delete</button>
       <div class="vote-stamp yes-stamp">YES</div>
       <div class="vote-stamp no-stamp">NO</div>
       <div class="idea-backdrop" aria-hidden="true"></div>
@@ -127,6 +143,7 @@
     </article>
   </template>
 
+  <script src="app.js?v=20260529-fix2" defer></script>
   <script src="app.js?v=20260528-fix1" defer></script>
   <script src="app.js" defer></script>
   <title>Spur — Adventure Ideas</title>
