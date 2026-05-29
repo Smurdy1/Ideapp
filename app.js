@@ -321,19 +321,19 @@ function animateVote(slide, choice) {
   slide.dataset.preview = choice;
   slide.dataset.vote = choice;
   setTimeout(() => {
-    vote(id, choice);
+    vote(id, choice, slide);
     updateSlideCounts(id);
     scrollToSlide(nextSlide || slide);
     slide.dataset.preview = "";
   }, 170);
 }
 
-function vote(id, choice) {
+function vote(id, choice, votedSlide = null) {
   const idea = ideas.find((item) => item.id === id);
   if (!idea) return;
 
   const previous = votes[id];
-  lastVote = { id, previous };
+  lastVote = { id, previous, slide: votedSlide };
   if (previous === choice) {
     idea[choice] -= 1;
     delete votes[id];
@@ -350,22 +350,35 @@ function vote(id, choice) {
 
 function undoLastVote() {
   if (!lastVote) return;
-  const idea = ideas.find((item) => item.id === lastVote.id);
+  const undoTarget = lastVote;
+  const idea = ideas.find((item) => item.id === undoTarget.id);
   if (!idea) return;
 
-  const current = votes[lastVote.id];
+  const current = votes[undoTarget.id];
   if (current) idea[current] -= 1;
-  if (lastVote.previous) {
-    idea[lastVote.previous] += 1;
-    votes[lastVote.id] = lastVote.previous;
+  if (undoTarget.previous) {
+    idea[undoTarget.previous] += 1;
+    votes[undoTarget.id] = undoTarget.previous;
   } else {
-    delete votes[lastVote.id];
+    delete votes[undoTarget.id];
   }
 
   save();
-  updateSlideCounts(lastVote.id);
+  updateSlideCounts(undoTarget.id);
+  scrollToUndoneSlide(undoTarget);
   lastVote = null;
   updateActionStates();
+}
+
+function scrollToUndoneSlide(undoTarget) {
+  if (undoTarget.slide?.isConnected) {
+    scrollToSlide(undoTarget.slide);
+    return;
+  }
+
+  const matchingSlide = [...document.querySelectorAll(".idea-slide")]
+    .find((slide) => slide.dataset.id === undoTarget.id);
+  if (matchingSlide) scrollToSlide(matchingSlide);
 }
 
 function updateSlideCounts(id) {
